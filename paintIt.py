@@ -36,7 +36,7 @@ class Ui_MainWindow(QObject):
         self.actionOpen.setObjectName("actionOpen")
         self.menuOpen.addAction(self.actionOpen)
         self.menubar.addAction(self.menuOpen.menuAction())
-        self.actionOpen.triggered.connect(self.theMaster.startTransition)
+        self.actionOpen.triggered.connect(theMaster.startTransition)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -50,46 +50,61 @@ class Ui_MainWindow(QObject):
 
 
 class TransitionMaster():
-    tranTimer = QTimer
-    tranTimer.timeout.connect(transition)
+
     def __init__(self):
-   #     self.transitionTimer = QTimer()
-   #     self.currentImage, self.newImage = QImage()
         self.pix = QPixmap()
         self.painter = QPainter(self.pix)
-
+        self.tranTimer = QTimer()
 
     def startTransition(self):
         self.newImage = QImage("cam92_1.jpg")
         self.currentImage = QImage("DSC_0035.jpg")
+        self.w = self.newImage.width()
+        self.h = self.newImage.height()
+        self.pix = QPixmap(self.currentImage)
+        self.scene = QGraphicsScene()
+        self.numSlices = 9
         self.slice = 0
-     #   transition_type = random.randint(0,6)
+        # self.transition_type = random.randint(0,6)
+        self.transition_type = 4
         self.tranTimer.start(10)
 
     def transition(self):
         self.slice += 1
         self.theTransition()
-        if self.slice > 50:
-            self.tranTimer.stop()
+        if self.slice > self.numSlices:
             self.painter.end()
-            self.currentImage = QPixmap(self.newImage)
-            item = QGraphicsPixmapItem(self.pix)
-            scene = QGraphicsScene(self)
-            scene.addItem(item)
-            ui.graphicsView.setScene(scene)
+            self.currentImage = self.newImage
         else:
+            item = QGraphicsPixmapItem(self.pix)
+            self.scene.addItem(item)
+            ui.graphicsView.setScene(self.scene)
             self.tranTimer.start(50)
 
     def theTransition(self):
-    #    if tran_type == 1:                  #wipe right
-        self.w = self.newImage.width()
-        self.h = self.newImage.height()
-        self.pix = QPixmap(self.currentImage)
-
-        cropped = self.newImage.copy(0, 0, int((self.w * self.slice) / 50),  self.h)
-        dest_point = QPoint(0,0,)
-        self.painter.begin(self.pix)
-        self.painter.drawImage(dest_point, cropped)
+        if self.transition_type == 1:                  #wipe right
+            cropped = self.newImage.copy(0, 0, int((self.w * self.slice) / self.numSlices),  self.h)
+            dest_point = QPoint(0,0,)
+            self.painter.begin(self.pix)
+            self.painter.drawImage(dest_point, cropped)
+        elif self.transition_type == 2:                #wipe left
+            self.chunk = int((self.w * self.slice) / self.numSlices)
+            cropped = self.newImage.copy(self.w-self.chunk, 0, self.w,  self.h)
+            dest_point = QPoint(self.w-self.chunk,0)
+            self.painter.begin(self.pix)
+            self.painter.drawImage(dest_point, cropped)
+        elif self.transition_type == 3:               #wipe down
+            self.chunk = int((self.h * self.slice) / self.numSlices)
+            cropped = self.newImage.copy(0, 0, self.w, self.chunk)
+            dest_point = QPoint(0,0)
+            self.painter.begin(self.pix)
+            self.painter.drawImage(dest_point, cropped)
+        elif self.transition_type == 4:                 #wipe up
+            self.chunk = int((self.h * self.slice) / self.numSlices)
+            cropped = self.newImage.copy(0, self.h-self.chunk, self.w, self.h)
+            dest_point = QPoint(0,self.h-self.chunk)
+            self.painter.begin(self.pix)
+            self.painter.drawImage(dest_point, cropped)
 
 
 
@@ -98,6 +113,7 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     theMaster = TransitionMaster()
+    theMaster.tranTimer.timeout.connect(theMaster.transition)
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
     MainWindow.show()
