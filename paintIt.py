@@ -48,6 +48,31 @@ class Ui_MainWindow(QObject):
         self.menuOpen.setTitle(_translate("MainWindow", "File"))
         self.actionOpen.setText(_translate("MainWindow", "Open"))
 
+class TransitionMaster():
+
+    def __init__(self):
+        self.transitionTimer = QTimer()
+        self.currentImage = QImage()
+        self.pix = QPixmap()
+        self.painter = QPainter(self.pix)
+
+    def startTransition(self, tran_type, newImage):
+        if tran_type == 1:                  #wipe right
+            for i in range (1,50):
+                self.w = newImage.width()
+                self.h = newImage.height
+                self.pix = QPixmap(self.currentImage)
+                cropped = self.newImage.copy(0, 0, int((self.w * i) / 50),  self.h)
+                dest_point = QPoint(0,0,)
+                self.painter.begin(self.pix)
+                self.painter.drawImage(dest_point, cropped)
+            self.painter.end()
+            self.pix = QPixmap(self.srcImage)
+            self.slice = 0
+
+
+
+
     def timerStart(self):
         self.timer.start(1)
 
@@ -80,6 +105,9 @@ class Ui_MainWindow(QObject):
         scene = QGraphicsScene(self)
         scene.addItem(item)
         self.graphicsView.setScene(scene)
+
+
+
 
 
 
