@@ -1,6 +1,6 @@
 import os, time, random
-from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5.QtGui import QPixmap, QImage, QPainter
+from PyQt5 import QtWidgets, QtGui, QtCore, Qt
+from PyQt5.QtGui import QPixmap, QImage, QPainter, QGuiApplication
 from PyQt5.QtCore import QObject, QPoint, QTimer, pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QGraphicsPixmapItem, QGraphicsScene, QDesktopWidget
 
@@ -36,7 +36,7 @@ class Ui_MainWindow(QObject):
         self.actionOpen.setObjectName("actionOpen")
         self.menuOpen.addAction(self.actionOpen)
         self.menubar.addAction(self.menuOpen.menuAction())
-        self.actionOpen.triggered.connect(theMaster.startTransition)
+        self.actionOpen.triggered.connect(theMaster.getFileList)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -48,6 +48,37 @@ class Ui_MainWindow(QObject):
         self.actionOpen.setText(_translate("MainWindow", "Open"))
 
 
+class Master():
+
+    def __init__(self):
+        #get screen size
+        screen = QGuiApplication.primaryScreen()
+        screenGeometry = screen.geometry()
+        self.screen_y = screenGeometry.height()
+        self.screen_x = screenGeometry.width()
+
+    def getFileList(self):
+        fdialog = QFileDialog()
+        fdialog.setFileMode(QFileDialog.DirectoryOnly)
+        file_name = QFileDialog.getExistingDirectory(None, 'Choose Directory', "/Users/rich")
+        image_list = [os.path.join(file_name, f) for f in os.listdir(file_name) if f.endswith('.jpg')]
+        for img in image_list:
+            # self.next_image = QImage(img)
+            # resized_image = self.scaleImage(self.next_image)
+            transitioner.initTransition("DSC_0035.jpg")
+            transitioner.transition()
+
+
+
+    def scaleImage(self, im):
+        if im.height() == self.screen_y and im.width() <= self.screen_x:
+            return im
+        else:
+            scaledImage = im.scaledToHeight(self.screen_y, QtCore.Qt.FastTransformation)
+            if scaledImage.width() > self.screen_x:                                               # width needs to be cropped
+                increment = (scaledImage.width() - self.screen_x) / 2                             # crop 1/2 oversize from each side
+                scaledImage = scaledImage.copy(int(increment), 0, int(scaledImage.width() - increment), int(self.screen_y))
+            return  scaledImage
 
 class TransitionMaster():
 
@@ -55,55 +86,54 @@ class TransitionMaster():
         self.pix = QPixmap()
         self.painter = QPainter(self.pix)
         self.tranTimer = QTimer()
-
-    def startTransition(self):
-        self.newImage = QImage("cam92_1.jpg")
-        self.currentImage = QImage("DSC_0035.jpg")
-        self.w = self.newImage.width()
-        self.h = self.newImage.height()
-        self.pix = QPixmap(self.currentImage)
+        self.newImage = QImage()
+        self.displayImage = QImage()
         self.scene = QGraphicsScene()
         self.numSlices = 9
+
+    def initTransition(self, newImage):
+        self.newImage = newImage
         self.slice = 0
         # self.transition_type = random.randint(0,6)
         self.transition_type = 4
-        self.tranTimer.start(10)
+        self.displayImage = QImage("cam92_1.jpg")
+        self.pix = QPixmap(self.displayImage)
+        self.painter.begin(self.pix)
 
     def transition(self):
         self.slice += 1
         self.theTransition()
         if self.slice > self.numSlices:
             self.painter.end()
-            self.currentImage = self.newImage
+            self.displayImage = self.newImage
         else:
             item = QGraphicsPixmapItem(self.pix)
             self.scene.addItem(item)
             ui.graphicsView.setScene(self.scene)
             self.tranTimer.start(50)
 
+
+
+
     def theTransition(self):
         if self.transition_type == 1:                  #wipe right
             cropped = self.newImage.copy(0, 0, int((self.w * self.slice) / self.numSlices),  self.h)
             dest_point = QPoint(0,0,)
-            self.painter.begin(self.pix)
             self.painter.drawImage(dest_point, cropped)
         elif self.transition_type == 2:                #wipe left
             self.chunk = int((self.w * self.slice) / self.numSlices)
             cropped = self.newImage.copy(self.w-self.chunk, 0, self.w,  self.h)
             dest_point = QPoint(self.w-self.chunk,0)
-            self.painter.begin(self.pix)
             self.painter.drawImage(dest_point, cropped)
         elif self.transition_type == 3:               #wipe down
             self.chunk = int((self.h * self.slice) / self.numSlices)
             cropped = self.newImage.copy(0, 0, self.w, self.chunk)
             dest_point = QPoint(0,0)
-            self.painter.begin(self.pix)
             self.painter.drawImage(dest_point, cropped)
         elif self.transition_type == 4:                 #wipe up
             self.chunk = int((self.h * self.slice) / self.numSlices)
             cropped = self.newImage.copy(0, self.h-self.chunk, self.w, self.h)
             dest_point = QPoint(0,self.h-self.chunk)
-            self.painter.begin(self.pix)
             self.painter.drawImage(dest_point, cropped)
 
 
@@ -112,8 +142,9 @@ if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
-    theMaster = TransitionMaster()
-    theMaster.tranTimer.timeout.connect(theMaster.transition)
+    transitioner = TransitionMaster()
+    transitioner.tranTimer.timeout.connect(transitioner.transition)
+    theMaster = Master()
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
     MainWindow.show()
