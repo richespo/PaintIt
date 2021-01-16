@@ -62,11 +62,11 @@ class Master():
         fdialog.setFileMode(QFileDialog.DirectoryOnly)
         file_name = QFileDialog.getExistingDirectory(None, 'Choose Directory', "/Users/rich")
         image_list = [os.path.join(file_name, f) for f in os.listdir(file_name) if f.endswith('.jpg')]
-        for img in image_list:
+     #   for img in image_list:
             # self.next_image = QImage(img)
             # resized_image = self.scaleImage(self.next_image)
-            transitioner.initTransition("DSC_0035.jpg")
-            transitioner.transition()
+        transitioner.initTransition()
+        transitioner.transition()
 
 
 
@@ -86,13 +86,13 @@ class TransitionMaster():
         self.pix = QPixmap()
         self.painter = QPainter(self.pix)
         self.tranTimer = QTimer()
-        self.newImage = QImage()
-        self.displayImage = QImage()
+      #  self.newImage = QImage()
+     #   self.displayImage = QImage()
         self.scene = QGraphicsScene()
         self.numSlices = 9
 
-    def initTransition(self, newImage):
-        self.newImage = newImage
+    def initTransition(self):
+        self.newImage = QImage("DSC_0035.jpg")
         self.slice = 0
         # self.transition_type = random.randint(0,6)
         self.transition_type = 4
@@ -104,7 +104,6 @@ class TransitionMaster():
         self.slice += 1
         self.theTransition()
         if self.slice > self.numSlices:
-            self.painter.end()
             self.displayImage = self.newImage
         else:
             item = QGraphicsPixmapItem(self.pix)
@@ -113,27 +112,25 @@ class TransitionMaster():
             self.tranTimer.start(50)
 
 
-
-
     def theTransition(self):
         if self.transition_type == 1:                  #wipe right
-            cropped = self.newImage.copy(0, 0, int((self.w * self.slice) / self.numSlices),  self.h)
+            cropped = self.newImage.copy(0, 0, int((self.newImage.width() * self.slice) / self.numSlices),  self.h)
             dest_point = QPoint(0,0,)
             self.painter.drawImage(dest_point, cropped)
         elif self.transition_type == 2:                #wipe left
             self.chunk = int((self.w * self.slice) / self.numSlices)
-            cropped = self.newImage.copy(self.w-self.chunk, 0, self.w,  self.h)
-            dest_point = QPoint(self.w-self.chunk,0)
+            cropped = self.newImage.copy(self.newImage.width()-self.chunk, 0, self.newImage.width(),  self.newImage.height())
+            dest_point = QPoint(self.newImage.width()-self.chunk,0)
             self.painter.drawImage(dest_point, cropped)
         elif self.transition_type == 3:               #wipe down
-            self.chunk = int((self.h * self.slice) / self.numSlices)
-            cropped = self.newImage.copy(0, 0, self.w, self.chunk)
+            self.chunk = int((self.newImage.height() * self.slice) / self.numSlices)
+            cropped = self.newImage.copy(0, 0, self.newImage.width(), self.chunk)
             dest_point = QPoint(0,0)
             self.painter.drawImage(dest_point, cropped)
         elif self.transition_type == 4:                 #wipe up
-            self.chunk = int((self.h * self.slice) / self.numSlices)
-            cropped = self.newImage.copy(0, self.h-self.chunk, self.w, self.h)
-            dest_point = QPoint(0,self.h-self.chunk)
+            self.chunk = int((self.newImage.height() * self.slice) / self.numSlices)
+            cropped = self.newImage.copy(0, self.newImage.height()-self.chunk, self.newImage.width(), self.newImage.height())
+            dest_point = QPoint(0,self.newImage.height()-self.chunk)
             self.painter.drawImage(dest_point, cropped)
 
 
