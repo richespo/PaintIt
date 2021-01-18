@@ -5,7 +5,8 @@ from PyQt5.QtCore import QObject, QPoint, QTimer, pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QGraphicsPixmapItem, QGraphicsScene, QDesktopWidget
 
 
-
+imageDir = "C:\\Users\\riche\\smallFrame"
+imageDuration = 5000       #in milliseconds
 
 
 class Ui_MainWindow(QObject):
@@ -57,6 +58,7 @@ class Master():
         screenGeometry = screen.geometry()
         self.screen_y = screenGeometry.height()
         self.screen_x = screenGeometry.width()
+        self.blkbox = QImage(self.screen_x, self.screen_y, 4)
         self.displayTimer = QTimer()
         self.begun = False
 
@@ -75,40 +77,84 @@ class Master():
         transitioner.initTransition(newImage)
         transitioner.startTransition()
         self.imageNum += 1
-        self.displayTimer.start(5000)
+        self.displayTimer.start(imageDuration)
 
 
     def getFileList(self):
         # fdialog = QFileDialog()
         # fdialog.setFileMode(QFileDialog.DirectoryOnly)
         # file_name = QFileDialog.getExistingDirectory(None, 'Choose Directory', "/Users/rich")
-        file_name = "C:\\Users\\riche\\smallFrame"
-        image_list = [os.path.join(file_name, f) for f in os.listdir(file_name) if f.endswith('.jpg')]
+        #file_name = "C:\\Users\\riche\\smallFrame"
+        image_list = [os.path.join(imageDir, f) for f in os.listdir(imageDir) if f.endswith('.jpg')]
         return image_list
 
     ''' scales image to height of display. After resize if wider than screen width lop off a bit from each side
         if less wide than screen pad both sides with black bar'''
 
     def scaleImage(self, im):
-        if im.height() == self.screen_y and im.width() <= self.screen_x:
+        if im.height() == self.screen_y and im.width() == self.screen_x:
             return im
         else:
             scaledImage = im.scaledToHeight(self.screen_y, QtCore.Qt.FastTransformation)
-            if scaledImage.height() == self.screen_y and scaledImage.width() <= self.screen_x:
+            if scaledImage.height() == self.screen_y and scaledImage.width() == self.screen_x:
                 return scaledImage
-            elif scaledImage.width() > self.screen_x:                                               # width needs to be cropped
-                increment = (scaledImage.width() - self.screen_x) / 2                             # crop 1/2 oversize from each side
+            elif scaledImage.width() > self.screen_x:                   # width needs to be cropped
+                increment = (scaledImage.width() - self.screen_x) / 2   # crop 1/2 oversize from each side
                 scaledImage = scaledImage.copy(increment, 0, int(scaledImage.width() - (2*increment)), int(self.screen_y))
                 return scaledImage
             elif scaledImage.width() < self.screen_x:
                 increment = (self.screen_x - scaledImage.width()) / 2
-                blkbox = QImage("blackImage.jpg")
-                myPainter = QPainter(blkbox)
+                self.blkbox.fill(0)                             # make it black
+                myPainter = QPainter( self.blkbox)
                 dest = QPoint(increment,0)
-                myPainter.begin(blkbox)
+                myPainter.begin(self.blkbox)
                 myPainter.drawImage(dest, scaledImage)
                 myPainter.end()
-                return  blkbox
+                return   self.blkbox
+
+
+    def stitch_em(self,portrait_image):
+        if self.firstImage == None:
+            self.firstImage = portrait_image
+            return None
+        else:
+            self.blkbox.fill(0)
+            if self.firstImage.width() + portrait_image.width() < self.screen_x:                 # if excess unused space
+                border = (self.screen_x - (self.firstImage.width() + portrait_image.width())) / 3  # compute padding\
+
+                self.blank_image.paste(self.firstImage, (int(border),0))                     #paste 1st image after border
+                self.blank_image.paste(portrait_image, ((int(border)+int(border)+self.firstImage.size[0]), 0))
+                self.return_image = self.blank_image
+                # self.GOT_firstImage = False
+                # self.firstImage = self.blank_image
+                return self.return_image
+            elif self.firstImage.size[0] + portrait_image.size[0] == screen_x:
+                self.blank_image.paste(self.firstImage, (0,0))
+                self.blank_image.paste(portrait_image, ((self.firstImage.size[0], 0)))
+                self.return_image = self.blank_image
+                self.GOT_firstImage = False
+                self.firstImage = self.blank_image
+                return self.return_image
+            else:                           #add code for width too wide
+                if self.firstImage.size[0] > screen_x/2:
+                    xtra = self.firstImage.size[0] - screen_x/2
+                    chop = int(xtra/2)
+                    box = (chop, 0, int(chop+(screen_x/2)), screen_y)
+                    self.firstImage = self.firstImage.crop(box)
+                if portrait_image.size[0] > screen_x/2:
+                    xtra = portrait_image.size[0] - screen_x/2
+                    chop = int(xtra/2)
+                    box = (chop, 0, int(chop+(screen_x/2)), screen_y)
+                    portrait_image = portrait_image.crop(box)
+                self.blank_image.paste(self.firstImage, (0,0))
+                self.blank_image.paste(portrait_image, ((self.firstImage.size[0], 0)))
+                self.return_image = self.blank_image
+                self.GOT_firstImage = False
+                self.firstImage = self.blank_image
+
+                self.blank_image = Image.new("RGB", (screen_x, screen_y), "black")
+                return self.return_image
+
 
 
 class TransitionMaster():
@@ -161,9 +207,9 @@ class TransitionMaster():
 
 
 
+
 ''' events generated by two timers, tranTimer times the transition stages
     displayTimer times the display time of image'''
-
 
 if __name__ == "__main__":
     import sys
