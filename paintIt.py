@@ -25,25 +25,27 @@ class Ui_MainWindow(QObject):
         self.graphicsView.setHorizontalScrollBarPolicy(1);
         self.graphicsView.setVerticalScrollBarPolicy(1);
         MainWindow.setCentralWidget(self.centralwidget)
+
+        ''' File menu open starts app, remove for final prog
+            so images are fullscreen. need to generate signal '''
+
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1280, 12))
         self.menubar.setObjectName("menubar")
         self.menuOpen = QtWidgets.QMenu(self.menubar)
         self.menuOpen.setObjectName("menuOpen")
         MainWindow.setMenuBar(self.menubar)
-        MainWindow.keyPressEvent = self.keyPressEvent
-
-
         self.actionOpen = QtWidgets.QAction(MainWindow)
         self.actionOpen.setObjectName("actionOpen")
         self.menuOpen.addAction(self.actionOpen)
         self.menubar.addAction(self.menuOpen.menuAction())
         self.actionOpen.triggered.connect(theMaster.masterInit)
 
+        MainWindow.keyPressEvent = self.keyPressEvent       #overrride
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
-    def keyPressEvent(self, e):
+    def keyPressEvent(self, e):                         #quit on q
         print("event", e)
         if e.key()  == QtCore.Qt.Key_Q :
             exit()
@@ -151,60 +153,68 @@ class Master():
 class TransitionMaster():
 
     def __init__(self):
-        self.pix = QPixmap()
+        self.pix = QPixmap()                #QPixMap as QPaintDevice
         self.painter = QPainter(self.pix)
-        self.tranTimer = QTimer()
+        self.tranTimer = QTimer()           #times the transition phases
         self.scene = QGraphicsScene()
-        self.numSlices = 10
+        self.numSlices = 10                 #num transition phases
 
+    #get the image to be displayed next and initiate
     def initTransition(self, im):
         self.newImage = im
         self.slice = 0
-        self.transition_type = random.randint(1,5)
-    #    self.transition_type = 5
+        self.transition_type = random.randint(1,6)
+     #   self.transition_type = 6
 
     def startTransition(self):
         self.slice += 1
         self.doTransition()
-        if self.slice > self.numSlices:
+        if self.slice > self.numSlices:             #transition done, remember displayed image
             self.displayImage = self.pix.toImage()
         else:
-            item = QGraphicsPixmapItem(self.pix)
+            item = QGraphicsPixmapItem(self.pix)    #QPixMap->item->scene->QGraphicsView thus displayed
             self.scene.addItem(item)
             ui.graphicsView.setScene(self.scene)
             self.tranTimer.start(50)
 
-
+    # the actual transition types
     def doTransition(self):
         if self.transition_type == 1:                  #wipe right
-            self.cropped = self.newImage.copy(0, 0, int((self.newImage.width() * self.slice) / self.numSlices), self.newImage.height())
+            cropped = self.newImage.copy(0, 0, int((self.newImage.width() * self.slice) / self.numSlices), self.newImage.height())
             dest_point = QPoint(0,0,)
-            self.painter.drawImage(dest_point, self.cropped)
+            self.painter.drawImage(dest_point, cropped)
         elif self.transition_type == 2:                #wipe left
-            self.chunk = int((self.newImage.width() * self.slice) / self.numSlices)
-            self.cropped = self.newImage.copy(self.newImage.width()-self.chunk, 0, self.newImage.width(),  self.newImage.height())
-            dest_point = QPoint(self.newImage.width()-self.chunk,0)
-            self.painter.drawImage(dest_point, self.cropped)
+            chunk = int((self.newImage.width() * self.slice) / self.numSlices)
+            cropped = self.newImage.copy(self.newImage.width()-chunk, 0, self.newImage.width(),  self.newImage.height())
+            dest_point = QPoint(self.newImage.width()-chunk,0)
+            self.painter.drawImage(dest_point, cropped)
         elif self.transition_type == 3:               #wipe down
-            self.chunk = int((self.newImage.height() * self.slice) / self.numSlices)
-            self.cropped = self.newImage.copy(0, 0, self.newImage.width(), self.chunk)
+            chunk = int((self.newImage.height() * self.slice) / self.numSlices)
+            cropped = self.newImage.copy(0, 0, self.newImage.width(), chunk)
             dest_point = QPoint(0,0)
-            self.painter.drawImage(dest_point, self.cropped)
+            self.painter.drawImage(dest_point, cropped)
         elif self.transition_type == 4:                 #wipe up
-            self.chunk = int((self.newImage.height() * self.slice) / self.numSlices)
-            self.cropped = self.newImage.copy(0, self.newImage.height()-self.chunk, self.newImage.width(), self.newImage.height())
-            dest_point = QPoint(0,self.newImage.height()-self.chunk)
-            self.painter.drawImage(dest_point, self.cropped)
-        elif self.transition_type == 5:
-            if self.slice <= 5:
-                h_slice = int(self.newImage.width() * self.slice / self.numSlices)
-                v_slice = int(self.newImage.height() * self.slice/ self.numSlices)
-                self.cropped = self.newImage.copy(int(self.newImage.width()/2)-h_slice, int(self.newImage.height()/2)-v_slice, 2*h_slice, 2*v_slice)
+            chunk = int((self.newImage.height() * self.slice) / self.numSlices)
+            cropped = self.newImage.copy(0, self.newImage.height()-chunk, self.newImage.width(), self.newImage.height())
+            dest_point = QPoint(0,self.newImage.height()-chunk)
+            self.painter.drawImage(dest_point, cropped)
+        elif self.transition_type == 5:                     #center out
+            if self.slice <= 10:
+                h_slice = int(self.newImage.width() * self.slice / (2*self.numSlices))
+                v_slice = int(self.newImage.height() * self.slice/ (2*self.numSlices))
+                cropped = self.newImage.copy(int(self.newImage.width()/2)-h_slice, int(self.newImage.height()/2)-v_slice, 2*h_slice, 2*v_slice)
                 dest_point = QPoint(int(self.newImage.width()/2-h_slice), int((self.newImage.height()/2)-v_slice))
-                if self.slice < 5:
-                    self.painter.drawImage(dest_point, self.cropped)
-                else:
-                    self.painter.drawImage(QPoint(0,0), self.newImage)
+                self.painter.drawImage(dest_point, cropped)
+        elif self.transition_type == 6:                     #outer edge in
+            self.displayImage = self.pix.toImage()
+            self.painter.drawImage(QPoint(0,0), self.newImage)
+            if self.slice <= 9:
+                h_slice = int(self.displayImage.width() * self.slice / (2 * self.numSlices))
+                v_slice = int(self.displayImage.height() * self.slice/ (2 * self.numSlices))
+                cropped = self.displayImage.copy(h_slice, v_slice, self.displayImage.width()-2*h_slice, self.displayImage.height()-2*v_slice)
+                dest_point = QPoint(h_slice, v_slice)
+                self.painter.drawImage(dest_point, cropped)
+
 
 
 
