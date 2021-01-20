@@ -5,8 +5,8 @@ from PyQt5.QtCore import QObject, QPoint, QTimer, pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QGraphicsPixmapItem, QGraphicsScene, QDesktopWidget
 
 
-imageDir = "/Users/rich/smallFrame"
-imageDuration = 5000       #in milliseconds
+IMAGE_DIR = "C:/Users/riche/smallFrame"
+IMAGE_DURATION = 5000       #in milliseconds
 
 
 class Ui_MainWindow(QObject):
@@ -31,8 +31,8 @@ class Ui_MainWindow(QObject):
         self.menuOpen = QtWidgets.QMenu(self.menubar)
         self.menuOpen.setObjectName("menuOpen")
         MainWindow.setMenuBar(self.menubar)
-        # self.timer = QTimer()
-        # self.timer.timeout.connect(self.transition)
+        MainWindow.keyPressEvent = self.keyPressEvent
+
 
         self.actionOpen = QtWidgets.QAction(MainWindow)
         self.actionOpen.setObjectName("actionOpen")
@@ -42,6 +42,12 @@ class Ui_MainWindow(QObject):
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def keyPressEvent(self, e):
+        print("event", e)
+        if e.key()  == QtCore.Qt.Key_Q :
+            exit()
+
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -84,7 +90,7 @@ class Master():
         transitioner.initTransition(self.newImage)
         transitioner.startTransition()
         self.imageNum += 1                  # index next image from list
-        self.displayTimer.start(imageDuration)
+        self.displayTimer.start(IMAGE_DURATION)
 
 
     def getFileList(self):
@@ -92,7 +98,7 @@ class Master():
         # fdialog.setFileMode(QFileDialog.DirectoryOnly)
         # file_name = QFileDialog.getExistingDirectory(None, 'Choose Directory', "/Users/rich")
         #file_name = "C:\\Users\\riche\\smallFrame"
-        image_list = [os.path.join(imageDir, f) for f in os.listdir(imageDir) if f.endswith('.jpg')]
+        image_list = [os.path.join(IMAGE_DIR, f) for f in os.listdir(IMAGE_DIR) if f.endswith('.jpg')]
         return image_list
 
     ''' scales image to height of display. After resize if wider than screen width lop off a bit from each side
@@ -114,7 +120,7 @@ class Master():
                     increment = (self.screen_x - scaledImage.width()) / 2
                     self.blkbox.fill(0)                             # make it black
                     myPainter = QPainter( self.blkbox)
-                    dest = QPoint(increment,0)
+                    dest = QPoint(int(increment),0)
                     myPainter.begin(self.blkbox)
                     myPainter.drawImage(dest, scaledImage)
                     myPainter.end()
@@ -131,37 +137,14 @@ class Master():
                         self.blkbox.fill(0)
                         padding = (self.screen_x - (self.firstHalf.width() + self.portrait.width())) / 3  # compute padding\
                         myPainter = QPainter( self.blkbox)
-                        dest1 = QPoint(padding,0)
-                        dest2 = QPoint(self.firstHalf.width() + 2 *padding, 0)
+                        dest1 = QPoint(int(padding),0)
+                        dest2 = QPoint(self.firstHalf.width() + 2 * int( padding), 0)
                         myPainter.begin(self.blkbox)
                         myPainter.drawImage(dest1, self.firstHalf)
                         myPainter.drawImage(dest2, self.portrait)
                         myPainter.end()
                         self.firstHalf = None
                         return self.blkbox
-                #self.return_image = self.blkbox
-                # self.GOT_firstImage = False
-                # self.firstImage = self.blank_image
-                # return self.return_image
-            # else:                           #add code for width too wide
-            #     if self.firstImage.size[0] > screen_x/2:
-            #         xtra = self.firstImage.size[0] - screen_x/2
-            #         chop = int(xtra/2)
-            #         box = (chop, 0, int(chop+(screen_x/2)), screen_y)
-            #         self.firstImage = self.firstImage.crop(box)
-            #     if portrait_image.size[0] > screen_x/2:
-            #         xtra = portrait_image.size[0] - screen_x/2
-            #         chop = int(xtra/2)
-            #         box = (chop, 0, int(chop+(screen_x/2)), screen_y)
-            #         portrait_image = portrait_image.crop(box)
-            #     self.blank_image.paste(self.firstImage, (0,0))
-            #     self.blank_image.paste(portrait_image, ((self.firstImage.size[0], 0)))
-            #     self.return_image = self.blank_image
-            #     self.GOT_firstImage = False
-            #     self.firstImage = self.blank_image
-            #
-            #     self.blank_image = Image.new("RGB", (screen_x, screen_y), "black")
-            #     return self.return_image
 
 
 
@@ -172,13 +155,13 @@ class TransitionMaster():
         self.painter = QPainter(self.pix)
         self.tranTimer = QTimer()
         self.scene = QGraphicsScene()
-        self.numSlices = 9
+        self.numSlices = 10
 
     def initTransition(self, im):
         self.newImage = im
         self.slice = 0
-        self.transition_type = random.randint(1,4)
-
+        self.transition_type = random.randint(1,5)
+    #    self.transition_type = 5
 
     def startTransition(self):
         self.slice += 1
@@ -212,6 +195,16 @@ class TransitionMaster():
             self.cropped = self.newImage.copy(0, self.newImage.height()-self.chunk, self.newImage.width(), self.newImage.height())
             dest_point = QPoint(0,self.newImage.height()-self.chunk)
             self.painter.drawImage(dest_point, self.cropped)
+        elif self.transition_type == 5:
+            if self.slice <= 5:
+                h_slice = int(self.newImage.width() * self.slice / self.numSlices)
+                v_slice = int(self.newImage.height() * self.slice/ self.numSlices)
+                self.cropped = self.newImage.copy(int(self.newImage.width()/2)-h_slice, int(self.newImage.height()/2)-v_slice, 2*h_slice, 2*v_slice)
+                dest_point = QPoint(int(self.newImage.width()/2-h_slice), int((self.newImage.height()/2)-v_slice))
+                if self.slice < 5:
+                    self.painter.drawImage(dest_point, self.cropped)
+                else:
+                    self.painter.drawImage(QPoint(0,0), self.newImage)
 
 
 
