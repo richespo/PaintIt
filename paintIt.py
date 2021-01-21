@@ -50,6 +50,8 @@ class Ui_MainWindow(QObject):
         if e.key()  == QtCore.Qt.Key_Q :
             exit()
 
+    def screenSize(self):
+        return (self.screen_x, self.screen_y)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -104,7 +106,8 @@ class Master():
         return image_list
 
     ''' scales image to height of display. After resize if wider than screen width lop off a bit from each side
-        if less wide than screen pad both sides with black bar'''
+        if less wide than screen pad both sides with black bar. Will compose a full sized image from two portrait 
+        sized images'''
 
     def scaleImage(self, im):
         if im.height() == self.screen_y and im.width() == self.screen_x:
@@ -158,6 +161,9 @@ class TransitionMaster():
         self.tranTimer = QTimer()           #times the transition phases
         self.scene = QGraphicsScene()
         self.numSlices = 10                 #num transition phases
+   #     tile_size = (ui.screenSize() // 6,  ui.screen_y // 4)
+        tiles = [[(1,1), (2,1), (3,1), (4, 1),(5,1), (6,1)], [(1,2), (2,2), (3,2), (4, 2),(5,2), (6,2)],
+                 [(1,3), (2,3), (3,3), (4, 3),(5,3), (6,3)], [(1,4), (2,4), (3,4), (4, 4),(5,4), (6,4)]]
 
     #get the image to be displayed next and initiate
     def initTransition(self, im):
@@ -214,6 +220,9 @@ class TransitionMaster():
                 cropped = self.displayImage.copy(h_slice, v_slice, self.displayImage.width()-2*h_slice, self.displayImage.height()-2*v_slice)
                 dest_point = QPoint(h_slice, v_slice)
                 self.painter.drawImage(dest_point, cropped)
+        elif self.transition_type == 7:
+            self.displayImage = self.pix.toImage()
+         #  cropped = self.newImage.copy(tiles[])
 
 
 
